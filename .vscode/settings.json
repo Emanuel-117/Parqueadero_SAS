@@ -1,0 +1,6 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "maven.executable.preferMavenWrapper": true,
+    "spring-boot.ls.checkJavaVersion": false,
+    "java.compile.nullAnalysis.mode": "automatic"
+}

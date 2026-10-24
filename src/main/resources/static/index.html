@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autos Colombia - Control de Parqueadero</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="navbar">
+        <div class="nav-left">
+            <div class="logo-mark"></div>
+            <span class="logo-title" id="navPageTitle">Autos Colombia - Registro de Entrada</span>
+        </div>
+
+        <nav class="nav-links">
+            <button type="button" class="nav-tab active" id="tabEntradaBtn" onclick="switchView('entrada')">Registro de Entrada</button>
+            <button type="button" class="nav-tab" id="tabSalidaBtn" onclick="switchView('salida')">Registro de Salida</button>
+            <a href="#mapaSection" class="nav-link-anchor" onclick="switchView('entrada'); scrollToMap();">Celdas</a>
+            <a href="javascript:void(0)" class="nav-link-anchor" onclick="showHelpModal()">Reportes</a>
+        </nav>
+
+        <div class="nav-right">
+            <div class="search-mini">
+                <input type="text" id="globalSearchInput" placeholder="Search or type..." onkeyup="handleQuickSearch(event)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            <div class="user-badge-mini" title="Usuario activo">
+                <div class="user-avatar">JP</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <main class="main-container">
+
+        <!-- =================================================================== -->
+        <!-- VISTA 1: REGISTRO DE ENTRADA                                         -->
+        <!-- =================================================================== -->
+        <section id="viewEntrada" class="view-section active">
+
+            <!-- HERO HEADER -->
+            <div class="hero-header">
+                <h1 class="hero-title">Autos Colombia - Registro de Entrada</h1>
+                <p class="hero-subtitle">Operación activa: Registro de entrada y asignación de celda.</p>
+                <div class="operator-badge">
+                    <span class="pulse-indicator"></span>
+                    <span id="headerOperatorText">Operador: Juan Pérez | Fecha y hora: <span id="currentDateTime">--/--/---- --:--</span></span>
+                </div>
+                <div class="hero-actions">
+                    <button type="button" class="btn btn-primary" onclick="submitIngresoForm()">
+                        Registrar Entrada y Asignar Celda
+                    </button>
+                </div>
+            </div>
+
+            <!-- ENTRADA FORM CONTAINER -->
+            <div class="card form-card">
+                <div class="card-header-center">
+                    <h2 class="section-title">Registro de Entrada</h2>
+                    <p class="section-subtitle">Diligencia los datos del vehículo y novedades antes de asignar una celda.</p>
+                </div>
+
+                <form id="ingresoForm" onsubmit="event.preventDefault(); submitIngresoForm();">
+                    <div class="form-grid">
+                        
+                        <!-- Columna Izquierda: Placa -->
+                        <div class="form-group">
+                            <label for="placaInput" class="form-label">Placa del Vehículo <span class="required">*</span></label>
+                            <input type="text" id="placaInput" class="form-control" placeholder="Ej: ABC123" maxlength="7" uppercase required oninput="this.value = this.value.toUpperCase()">
+                            <span class="form-hint">Verifica que la placa esté limpia y en mayúsculas.</span>
+                        </div>
+
+                        <!-- Columna Derecha: Selector Tipo Vehículo -->
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Vehículo (Automóvil, Motocicleta, Camioneta) <span class="required">*</span></label>
+                            <div class="segmented-control" id="tipoVehiculoSelector">
+                                <button type="button" class="segment-btn active" data-type="AUTOMOVIL" onclick="selectVehicleType('AUTOMOVIL', this)">Automóvil</button>
+                                <button type="button" class="segment-btn" data-type="MOTO" onclick="selectVehicleType('MOTO', this)">Motocicleta</button>
+                                <button type="button" class="segment-btn" data-type="CAMIONETA" onclick="selectVehicleType('CAMIONETA', this)">Camioneta</button>
+                            </div>
+                            <span class="form-hint">Selecciona la categoría para filtrar la celda disponible correspondiente.</span>
+                        </div>
+
+                        <!-- Columna Izquierda: Operador -->
+                        <div class="form-group">
+                            <label for="operadorInput" class="form-label">Operador (Activo)</label>
+                            <input type="text" id="operadorInput" class="form-control" value="Carlos Andrés Restrepo (Operador)" readonly>
+                            <span class="form-hint">Solo lectura - sesión activa en turno.</span>
+                        </div>
+
+                        <!-- Columna Derecha: Número de Ingreso -->
+                        <div class="form-group">
+                            <label for="numIngresoInput" class="form-label">Número de Ingreso</label>
+                            <input type="text" id="numIngresoInput" class="form-control" placeholder="Autogenerado por el sistema" readonly>
+                            <span class="form-hint">Sistema - asignación correlativa automática.</span>
+                        </div>
+
+                        <!-- Celda Seleccionada -->
+                        <div class="form-group full-width">
+                            <label class="form-label">Celda Seleccionada <span class="required">*</span></label>
+                            <div class="selected-cell-banner" id="selectedCellBanner">
+                                <span class="cell-pill-status" id="selectedCellLabel">Ninguna celda seleccionada (Haz clic en una celda verde abajo)</span>
+                                <input type="hidden" id="selectedCellId" value="">
+                            </div>
+                        </div>
+
+                        <!-- Novedades y Estado del Vehículo -->
+                        <div class="form-group full-width">
+                            <label for="novedadesInput" class="form-label">Novedades y Estado del Vehículo (Rayones, golpes, accesorios)</label>
+                            <textarea id="novedadesInput" class="form-control" rows="2" placeholder="Describe novedades visibles o accesorios entregados"></textarea>
+                            <span class="form-hint">Se registrará junto con el ticket. Dejar vacío si el vehículo ingresa sin novedades visibles.</span>
+                        </div>
+
+                    </div>
+
+                    <!-- Botón de Envío -->
+                    <div class="form-footer">
+                        <button type="submit" class="btn btn-primary btn-large" id="btnSubmitEntrada">
+                            Registrar Entrada y Asignar Celda
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- MAPA DE CELDAS INTERACTIVO -->
+            <div class="card map-card" id="mapaSection">
+                <div class="map-header">
+                    <div class="map-title-wrap">
+                        <svg class="map-pin-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        <p class="map-instructions">
+                            <strong>Mapa de Celdas:</strong> vista operativa para asignación inmediata. 
+                            <span class="legend-badge legend-green">Celdas en verde: Disponible</span>
+                            <span class="legend-badge legend-red">Celdas en rojo: Ocupada</span>
+                        </p>
+                    </div>
+                    <div class="map-controls">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="cargarMapaCeldas()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            Actualizar Mapa
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grid de Celdas -->
+                <div class="cells-grid" id="cellsGridContainer">
+                    <!-- Renderizado dinámicamente vía JavaScript -->
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- =================================================================== -->
+        <!-- VISTA 2: REGISTRO DE SALIDA                                          -->
+        <!-- =================================================================== -->
+        <section id="viewSalida" class="view-section">
+
+            <!-- HERO HEADER SALIDA -->
+            <div class="hero-header">
+                <h1 class="hero-title">Registro de Salida</h1>
+                <p class="hero-subtitle">Valida los datos del vehículo y liquida la salida antes de liberar la celda.</p>
+                <div class="quick-tags-wrap">
+                    <span class="quick-tags-title">Búsquedas rápidas activas:</span>
+                    <div class="quick-tags-list" id="quickTagsList">
+                        <!-- Placas activas rápidas -->
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <button type="button" class="btn btn-secondary" onclick="abrirModalNovedades()">Ver Hoja de Novedades</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmarSalidaVehiculo()">Confirmar Salida y Liberar Celda</button>
+                </div>
+            </div>
+
+            <!-- BUSCAR VEHÍCULO -->
+            <div class="card search-card">
+                <div class="card-header-center">
+                    <h2 class="section-title">Buscar vehículo</h2>
+                    <p class="section-subtitle">Ingresa la placa o el número de celda para cargar el registro de estadía.</p>
+                </div>
+
+                <div class="search-form-row">
+                    <div class="search-input-group">
+                        <label for="searchPlacaInput" class="form-label">Buscar por Placa o número de celda</label>
+                        <div class="input-with-button">
+                            <input type="text" id="searchPlacaInput" class="form-control" placeholder="Ej: ABC123, A-01, M-02" onkeyup="if(event.key==='Enter') buscarEstanciaSalida()">
+                            <button type="button" class="btn btn-primary" onclick="buscarEstanciaSalida()">Buscar</button>
+                        </div>
+                        <span class="form-hint">Escribe la placa completa o número de celda y presiona Buscar.</span>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="form-label">Límite de validación</label>
+                        <div class="pill-filters">
+                            <button type="button" class="pill-btn active">Recientes</button>
+                            <button type="button" class="pill-btn">Próximos a vencer</button>
+                            <button type="button" class="pill-btn">No autorizados</button>
+                        </div>
+                        <span class="form-hint">Filtro predictivo sobre estancia.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESUMEN DEL VEHÍCULO -->
+            <div class="summary-section">
+                <h2 class="block-title">Resumen del Vehículo</h2>
+
+                <div class="summary-grid">
+                    <!-- Tarjeta 1: Hora de Entrada -->
+                    <div class="summary-card">
+                        <span class="card-caption">Hora de Entrada</span>
+                        <div class="card-main-val" id="summaryHoraEntrada">--:--:--</div>
+                        <span class="card-sub-info" id="summaryFechaEntrada">Fecha: Pendiente</span>
+                    </div>
+
+                    <!-- Tarjeta 2: Tiempo Transcurrido -->
+                    <div class="summary-card">
+                        <span class="card-caption">Tiempo Transcurrido</span>
+                        <div class="card-main-val" id="summaryTiempoTranscurrido">-- h -- min</div>
+                        <span class="card-sub-info">Tarifa calculada por hora/fracción</span>
+                    </div>
+
+                    <!-- Tarjeta 3: Celda Asignada -->
+                    <div class="summary-card">
+                        <span class="card-caption">Celda Asignada</span>
+                        <div class="card-main-val" id="summaryCeldaAsignada">--</div>
+                        <span class="card-sub-info" id="summaryTipoVehiculo">Tipo: --</span>
+                    </div>
+
+                    <!-- Tarjeta 4: Total a Liquidar -->
+                    <div class="summary-card highlight-card">
+                        <span class="card-caption">Total Liquidado</span>
+                        <div class="card-main-val currency-val" id="summaryTotalCobrar">$0 COP</div>
+                        <span class="card-sub-info" id="summaryTarifaInfo">Tarifa: $5.000/hora</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORIAL DE NOVEDADES DEL VEHÍCULO -->
+            <div class="novelties-section">
+                <div class="novelties-split">
+                    
+                    <div class="novelties-left">
+                        <h2 class="block-title">Historial de Novedades del Vehículo</h2>
+                        <p class="block-desc">Revisa eventos anteriores del vehículo antes de autorizar la salida y cobro.</p>
+                        
+                        <div class="action-buttons-stack">
+                            <button type="button" class="btn btn-secondary" onclick="abrirModalNovedades()">Ver Hoja de Novedades</button>
+                            <button type="button" class="btn btn-primary" onclick="confirmarSalidaVehiculo()">Confirmar Salida y Liberar Celda</button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Badges de Inspección acordados -->
+                    <div class="novelties-badges-grid">
+                        
+                        <div class="inspection-badge-card">
+                            <div class="badge-icon icon-shield">🛡️</div>
+                            <span class="badge-title">Inspección realizada</span>
+                            <span class="badge-sub">Revisión en entrada</span>
+                            <strong class="badge-status-val" id="badgeInspeccionHora">08:45 AM</strong>
+                        </div>
+
+                        <div class="inspection-badge-card">
+                            <div class="badge-icon icon-receipt">🧾</div>
+                            <span class="badge-title">Cobro proyectado</span>
+                            <span class="badge-sub">Liquidación sistema</span>
+                            <strong class="badge-status-val" id="badgeCobroVal">$0 COP</strong>
+                        </div>
+
+                        <div class="inspection-badge-card">
+                            <div class="badge-icon icon-barrier">🚧</div>
+                            <span class="badge-title">Restricción</span>
+                            <span class="badge-sub">Validación legal</span>
+                            <strong class="badge-status-val status-green">Sin restricción</strong>
+                        </div>
+
+                        <div class="inspection-badge-card">
+                            <div class="badge-icon icon-check">✅</div>
+                            <span class="badge-title">Validación</span>
+                            <span class="badge-sub">Estado de salida</span>
+                            <strong class="badge-status-val status-green">Aprobada</strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Lista de Novedades Detallada -->
+                <div class="novelties-timeline-card" id="noveltiesListContainer">
+                    <p class="empty-state-text">No hay novedades registradas para este vehículo.</p>
+                </div>
+            </div>
+
+            <!-- ESTADO DE CELDA Y CONFIRMACIÓN -->
+            <div class="cell-status-bar-card">
+                <div class="cell-status-left">
+                    <h3 class="cell-status-title">Estado de Celda</h3>
+                    <p class="cell-status-desc">La celda volverá a <strong>Disponible (Verde)</strong> al confirmar la salida.</p>
+                </div>
+                <div class="cell-status-right">
+                    <div class="badge-celda-liberacion">
+                        <div class="thumb-square"></div>
+                        <div class="thumb-info">
+                            <span class="thumb-label">Badge de Estado</span>
+                            <span class="thumb-sub">Celda a liberar: <strong id="liberarCeldaNumero">--</strong></span>
+                            <span class="status-indicator-tag green-tag">● Disponible</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+        <span>Autos Colombia • Operación de parqueaderos</span>
+        <span class="footer-tip">Consejo: Verifica placa o celda antes de confirmar para evitar liberaciones incorrectas.</span>
+    </footer>
+
+    <!-- MODAL HOJA DE NOVEDADES -->
+    <div id="modalNovedades" class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Hoja de Inspección y Novedades</h3>
+                <button type="button" class="close-btn" onclick="cerrarModalNovedades()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modalNovedadesContent">
+                    <p>Cargando información...</p>
+                </div>
+                
+                <hr class="modal-divider">
+
+                <h4>Agregar Novedad Adicional</h4>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label class="form-label">Tipo de Novedad</label>
+                    <select id="modalTipoNovedad" class="form-control">
+                        <option value="RAYON_LEVE">Rayón leve o golpe</option>
+                        <option value="ALARMA_ACTIVADA">Alarma sonando</option>
+                        <option value="LUCES_ENCENDIDAS">Luces encendidas</option>
+                        <option value="VENTANA_ABIERTA">Ventana abierta</option>
+                        <option value="OTRO">Otro reporte de seguridad</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción del incidente</label>
+                    <textarea id="modalDescNovedad" class="form-control" rows="3" placeholder="Detalla el hallazgo observado"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalNovedades()">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarNovedadDesdeModal()">Guardar Novedad</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>

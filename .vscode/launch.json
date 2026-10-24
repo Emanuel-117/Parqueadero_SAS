@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-ParqueaderoApplication",
+            "request": "launch",
+            "mainClass": "com.autoscolombia.parqueadero.ParqueaderoApplication",
+            "projectName": "parqueadero-backend",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
